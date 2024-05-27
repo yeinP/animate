@@ -18,6 +18,7 @@ import ShelterInfo123 from "@/pages/adoption/ShelterInfo123.vue";
 
 
 
+
 const routes = [
     {path:'/', component: Home},
     {path:'/login', component: Login },
@@ -32,7 +33,7 @@ const routes = [
     { path: '/adoption/article/:arNo', name: 'AdoptionArticle', component: AdoptionArticle},
     { path: '/notice', name: 'Notice', component: Notice },
     { path: '/notice/write', name: 'NoticeWrite', component: NoticeWrite },
-    {path:  '/notice/:noticeNo', name:'NoticeArticle', component: NoticeArticle}
+    {path:  '/notice/:noticeNo', name:'NoticeArticle', component: NoticeArticle},
 
 
 ]

@@ -41,7 +41,7 @@
               <td class="spanTitle">성별</td>
               <td v-if="!isEditMode">{{ missCare.mcGender}}</td>
               <td v-if="isEditMode">
-                <input type="text" v-bind:v-model="mcGneder" v-bind:value="missCare.mcGender"/>
+                <input type="text" v-bind:v-model="mcGender" v-bind:value="missCare.mcGender"/>
               </td>
             </tr>
             <tr>
@@ -151,10 +151,10 @@
           <div class="replyBox-child">
             <div class="reply_" v-for="(reply, index) in replyList" :key="index">
               <div class="reply-info">
-
                 <div class="nickname">{{ reply.userNickname }}<div v-if="reply.userNo == missCare.userNo" class="writer">작성자</div></div>
                 <div class="re">{{ reply.reply }}</div>
                 <div class="regdate">{{ formattedReplyDate(reply.replyDate) }}</div>
+                <div class="delmod" v-if="reply.replyWriter == userNo"><span>수정</span>/<span @click="deleteReply(reply.replyNo)">삭제</span></div>
               </div>
               <div class="r-reply-box" >
                 <div class="r-reply">
@@ -173,6 +173,7 @@
                   <div class="reNickname">{{reReply.userNickname}}<div v-if="reReply.userNo == missCare.userNo" class="writer">작성자</div></div>
                   <div class="reReply">{{reReply.reReply}}</div>
                   <div class="reRegdate">{{formattedReplyDate(reReply.reReplyDate)}}</div>
+
                 </div>
               </div>
 
@@ -192,7 +193,6 @@ import {onMounted, ref} from "vue";
 import store from "@/scrpits/store";
 import axios from "axios";
 import router from "@/scrpits/router";
-
 export default {
   name : 'MissCareModal',
   setup(){
@@ -210,8 +210,18 @@ export default {
   },
   data(){
     return{
+      stompClient: null,
       mcLoc: '',
       mcLoc2: '',
+      mcGender:"",
+      mcBreed:"",
+      mcAge:"",
+      mcWeight:"",
+      mcAddr:"",
+      mcStatus:"",
+      mcColor:"",
+      mcChar:"",
+      mcEtc:"",
       sidoList: [],
       sigunguList: [],
       missCareImgList: [],
@@ -287,6 +297,7 @@ export default {
     }
   },
   methods:{
+
     editValue() {
       this.originalValue = this.missCare.mcGender;
       this.editedValue = this.missCare.mcGender;
@@ -347,8 +358,7 @@ export default {
         return weight + 'kg';
       }
     },
-    writeReply(){
-
+    async writeReply() {
       if (this.userNo) {
         this.misscareReplyDto.replyWriter = this.userNo;
         const requestData = {
@@ -356,23 +366,37 @@ export default {
           mcNo: this.$props.mcNo,
           userNo: this.userNo,
         };
-        axios.post('/animate/misscare/reply', requestData, {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+        try {
+          await axios.post('/animate/misscare/reply', requestData, {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            }
+          });
+          // 댓글 작성 후에 새로운 댓글만 가져와서 추가
+          const newReply = await this.getNewReply();
+          if (newReply) {
+            this.replyList.push(newReply); // 새로운 댓글 추가
+            this.reply = ''; // 입력 필드 초기화
           }
-        }).then(response => {
-          this.reply = '';
-          console.log("post" + response)
-            })
-            .catch(error =>{
-              console.error(error);
-            });
+        } catch (error) {
+          console.error('Error writing reply:', error);
+        }
       } else {
         const loginAl = confirm("로그인 후 댓글 작성 가능합니다.");
         if(loginAl){
           router.push({path:'/login'});
         }
         console.error('userNo is null');
+      }
+    },
+
+    async getNewReply() {
+      try {
+        const response = await axios.get(`/animate/misscare/reply/${this.$props.mcNo}`);
+        return response.data; // 새로운 댓글 데이터 반환
+      } catch (error) {
+        console.error('Error fetching new reply:', error);
+        return null;
       }
     },
     writeReReply(replyNo) {
@@ -446,7 +470,34 @@ export default {
         console.error('Error fetching data:', error);
       }
     },
+    deleteReply(replyNo) {
+      const hasReplies = this.reReplyList.some(reReply => reReply.replyNo === replyNo);
+      const conf = confirm("댓글을 삭제하시겠습니까?");
+      if (hasReplies) {
+        const confre = confirm("댓글 삭제 시 대댓글도 삭제됩니다. 삭제하시겠습니까?");
+        if (confre) {
+          axios.post(`/animate/misscare/reply/delete/${replyNo}`)
+              .then(() => {
+                console.log('Reply and its replies deleted successfully');
+              })
+              .catch(error => {
+                console.error('Error deleting reply and its replies:', error);
+              });
+        }
+      } else {
+        if (conf) {
+          axios.post(`/animate/misscare/reply/delete/${replyNo}`)
+              .then(() => {
+                console.log('Reply deleted successfully');
+              })
+              .catch(error => {
+                console.error('Error deleting reply:', error);
+              });
+        }
+      }
+    }
   }
+
 }
 </script>
 
